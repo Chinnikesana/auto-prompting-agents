@@ -1,0 +1,14 @@
+fast-agent-mcp
+mcp
+openai
+google-generativeai
+requests
+pymongo
+schedule
+beautifulsoup4
+duckduckgo-search
+feedparser
+pydantic
+python-dotenv
+pyyaml
+fast-agent-mcp
