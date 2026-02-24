@@ -8,16 +8,20 @@ from builder.builder_tools.launch_worker_agent import launch_worker_agent
 
 import json
 
-mcp = FastMCP("launch_worker_agent")
+mcp = FastMCP("launch_agent")
 
 
 @mcp.tool()
 def launch_agent(agent_id: str, agent_file: str, goal: str,
-                 tools: str, interval_hours: int) -> str:
-    """Launch the Worker Agent as a detached subprocess. tools is a JSON array string."""
+                 tools: list, interval_hours: int) -> str:
+    """Launch the Worker Agent as a detached subprocess.
+    CRITICAL: agent_id and agent_file MUST be the exact values returned by gen_worker_agent.
+    Do NOT invent or guess agent_id (e.g. '12345') or agent_file (e.g. 'agent.py').
+    Use the agent_id and agent_file from the gen_worker_agent tool result only.
+    tools must be a Python list of strings e.g. ["web_search", "send_email"].
+    """
     tool_list = json.loads(tools) if isinstance(tools, str) else tools
-    launch_worker_agent(agent_id, agent_file, goal, tool_list, interval_hours)
-    return "Agent launched"  # This line won't be reached due to sys.exit
+    return launch_worker_agent(agent_id, agent_file, goal, tool_list, interval_hours)
 
 
 if __name__ == "__main__":

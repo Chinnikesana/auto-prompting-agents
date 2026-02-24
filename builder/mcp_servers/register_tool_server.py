@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from mcp.server.fastmcp import FastMCP
 from builder.builder_tools.register_tool import register_tool
 
-mcp = FastMCP("register_tool")
+mcp = FastMCP("reg_tool")
 
 
 @mcp.tool()

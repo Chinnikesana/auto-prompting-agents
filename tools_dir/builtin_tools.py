@@ -12,9 +12,8 @@ Tools:
   - read_email: Read emails via IMAP
   - send_email: Send emails via SMTP
 """
-import os
-import json
 from datetime import datetime
+from core.config import Config
 
 
 # ---------------------------------------------------------------------------
@@ -22,7 +21,7 @@ from datetime import datetime
 # ---------------------------------------------------------------------------
 def web_search(query: str) -> str:
     """Search the web using DuckDuckGo and return top 5 results."""
-    if os.getenv("TOOL_TEST_MODE", "").lower() == "true":
+    if Config.TOOL_TEST_MODE:
         return "Mock search results for: " + query
 
     try:
@@ -51,7 +50,7 @@ def web_search(query: str) -> str:
 # ---------------------------------------------------------------------------
 def web_scraper(url: str) -> str:
     """Fetch a URL and return the first 2000 characters of clean text content."""
-    if os.getenv("TOOL_TEST_MODE", "").lower() == "true":
+    if Config.TOOL_TEST_MODE:
         return "Mock scraped content from: " + url
 
     try:
@@ -125,7 +124,7 @@ def write_file(file_path: str, content: str, mode: str = "write") -> str:
 def http_request(url: str, method: str = "GET", headers: dict = None,
                  body: dict = None) -> str:
     """Make an HTTP request and return the response text."""
-    if os.getenv("TOOL_TEST_MODE", "").lower() == "true":
+    if Config.TOOL_TEST_MODE:
         return f"Mock HTTP {method} response from: {url}"
 
     try:
@@ -157,7 +156,7 @@ def http_request(url: str, method: str = "GET", headers: dict = None,
 # ---------------------------------------------------------------------------
 def read_email(count: int = 5, folder: str = "INBOX") -> str:
     """Read recent emails from an IMAP mailbox. Returns the latest `count` emails."""
-    if os.getenv("TOOL_TEST_MODE", "").lower() == "true":
+    if Config.TOOL_TEST_MODE:
         return f"Mock email: 1 unread message in {folder} — Subject: Test Email"
 
     try:
@@ -165,11 +164,11 @@ def read_email(count: int = 5, folder: str = "INBOX") -> str:
         import email as email_lib
         from email.header import decode_header
 
-        smtp_host = os.getenv("EMAIL_SMTP_HOST", "smtp.gmail.com")
+        smtp_host = Config.EMAIL_SMTP_HOST
         # Derive IMAP host from SMTP host
         imap_host = smtp_host.replace("smtp.", "imap.")
-        user = os.getenv("EMAIL_SENDER", "")
-        password = os.getenv("EMAIL_APP_PASSWORD", "")
+        user = Config.EMAIL_SENDER
+        password = Config.EMAIL_APP_PASSWORD
 
         if not user or not password:
             return "Error: EMAIL_SENDER and EMAIL_APP_PASSWORD must be set in .env"
@@ -243,7 +242,7 @@ def read_email(count: int = 5, folder: str = "INBOX") -> str:
 # ---------------------------------------------------------------------------
 def send_email(to: str, subject: str, body: str) -> str:
     """Send an email via SMTP using credentials from environment variables."""
-    if os.getenv("TOOL_TEST_MODE", "").lower() == "true":
+    if Config.TOOL_TEST_MODE:
         return f"Mock email sent to {to} with subject: {subject}"
 
     try:
@@ -251,10 +250,10 @@ def send_email(to: str, subject: str, body: str) -> str:
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
 
-        sender = os.getenv("EMAIL_SENDER", "")
-        password = os.getenv("EMAIL_APP_PASSWORD", "")
-        smtp_host = os.getenv("EMAIL_SMTP_HOST", "smtp.gmail.com")
-        smtp_port = int(os.getenv("EMAIL_SMTP_PORT", "587"))
+        sender = Config.EMAIL_SENDER
+        password = Config.EMAIL_APP_PASSWORD
+        smtp_host = Config.EMAIL_SMTP_HOST
+        smtp_port = Config.EMAIL_SMTP_PORT
 
         if not sender or not password:
             return "Error: EMAIL_SENDER and EMAIL_APP_PASSWORD must be set in .env"

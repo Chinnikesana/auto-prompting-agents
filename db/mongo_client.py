@@ -15,7 +15,8 @@ def get_client():
     """Get or create the MongoDB client singleton."""
     global _client
     if _client is None:
-        uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+        from core.config import Config
+        uri = Config.MONGO_URI
         _client = MongoClient(uri, serverSelectionTimeoutMS=5000)
     return _client
 
@@ -24,7 +25,8 @@ def get_db():
     """Get the application database."""
     global _db
     if _db is None:
-        db_name = os.getenv("MONGO_DB_NAME", "dynamic_agents")
+        from core.config import Config
+        db_name = Config.MONGO_DB_NAME
         _db = get_client()[db_name]
     return _db
 

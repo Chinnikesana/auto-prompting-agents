@@ -12,32 +12,29 @@ Usage:
     from llm.llm_router import call_llm
     result = call_llm("code_writing", "Write a function...", "You are a Python expert.")
 """
+import os
 import re
 import time
 import datetime
-from llm import deepseek_client, grok_client, gemini_client, huggingface_client, hf_router_client
+from llm import deepseek_client, gemini_client, huggingface_client, hf_router_client, ollama_client, groq_client
 from db.collections import llm_logs
 
 # ---------------------------------------------------------------------------
-# Provider priority by task type (all free models)
+# Provider priority by task type
+# groq = Groq Cloud (llama-3.3-70b, ~250 tok/sec, free tier)
+# ollama = local qwen3:8b (fallback, no API key, fully offline)
 # ---------------------------------------------------------------------------
 PRIORITY = {
-    # Code writing: DeepSeek is best at reasoning through code, then HF Router,
-    # then HuggingFace (Llama 4 / Mixtral), Gemini as last resort
-    "code_writing": ["deepseek", "hf_router", "huggingface", "gemini", "grok"],
-
-    # Prompt generation: lighter task, Gemini is fast and great here
-    "prompt_generation": ["gemini", "deepseek", "hf_router", "huggingface", "grok"],
-
-    # Tool identification: also lighter, Gemini first
-    "tool_identification": ["gemini", "deepseek", "hf_router", "huggingface", "grok"],
+    "code_writing":       ["groq", "ollama", "deepseek", "gemini", "hf_router", "huggingface"],
+    "prompt_generation":  ["groq", "ollama", "gemini",  "deepseek", "hf_router", "huggingface"],
+    "tool_identification":["groq", "ollama", "gemini",  "deepseek", "hf_router", "huggingface"],
 }
 
 # Max tokens by task type
 MAX_TOKENS = {
     "code_writing": 700,
-    "prompt_generation": 300,
-    "tool_identification": 300,
+    "prompt_generation": 600,   # needs enough room for full JSON with system_prompt + tools
+    "tool_identification": 400,
 }
 
 # In-memory rate-limit tracker: provider -> timestamp of last 429
@@ -66,10 +63,12 @@ def _strip_code_fences(text: str) -> str:
 def _call_provider(provider: str, system_prompt: str, user_prompt: str,
                    max_tokens: int, task_type: str) -> str:
     """Call a single LLM provider. Raises on failure."""
-    if provider == "deepseek":
+    if provider == "groq":
+        return groq_client.call(system_prompt, user_prompt, max_tokens)
+    elif provider == "ollama":
+        return ollama_client.call(system_prompt, user_prompt, max_tokens, task_type)
+    elif provider == "deepseek":
         return deepseek_client.call(system_prompt, user_prompt, max_tokens)
-    elif provider == "grok":
-        return grok_client.call(system_prompt, user_prompt, max_tokens)
     elif provider == "gemini":
         return gemini_client.call(system_prompt, user_prompt, max_tokens)
     elif provider == "hf_router":
@@ -105,6 +104,16 @@ def _is_rate_limit_error(exc: Exception) -> bool:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+def _get_priority(task_type: str) -> list:
+    """Return provider priority, putting PREFERRED_LLM first if set."""
+    base = list(PRIORITY.get(task_type, PRIORITY["code_writing"]))
+    preferred = os.getenv("PREFERRED_LLM", "").lower()
+    if preferred and preferred in base:
+        base.remove(preferred)
+        base.insert(0, preferred)
+    return base
+
+
 def call_llm(task_type: str, prompt: str, system_prompt: str = "") -> str:
     """
     Call the best available free LLM for the given task type.
@@ -117,7 +126,7 @@ def call_llm(task_type: str, prompt: str, system_prompt: str = "") -> str:
     Returns:
         Cleaned response string.
     """
-    providers = PRIORITY.get(task_type, PRIORITY["code_writing"])
+    providers = _get_priority(task_type)
     max_tokens = MAX_TOKENS.get(task_type, 700)
 
     last_error = None
@@ -163,11 +172,12 @@ def call_llm(task_type: str, prompt: str, system_prompt: str = "") -> str:
 def _log(task_type: str, provider: str, prompt: str, response: str,
          success: bool, fallback_used: bool, fallback_reason: str | None,
          duration_ms: int):
-    """Log an LLM call to MongoDB (best-effort, never raises)."""
+    """Log an LLM call to MongoDB with full prompt and response text."""
     try:
         models = {
+            "groq": "groq/llama-3.3-70b-versatile",
+            "ollama": f"ollama/{os.getenv('OLLAMA_MODEL', 'qwen3:8b')}",
             "deepseek": "deepseek-reasoner",
-            "grok": "grok-2-latest",
             "gemini": "gemini-2.0-flash-exp",
             "hf_router": "meta-llama/Llama-3.3-70B-Instruct",
             "huggingface": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
@@ -176,6 +186,10 @@ def _log(task_type: str, provider: str, prompt: str, response: str,
             "task_type": task_type,
             "model_used": models.get(provider, provider),
             "provider": provider,
+            # full text stored
+            "prompt_text": prompt,
+            "response_text": response,
+            # char counts for quick stats
             "prompt_length_chars": len(prompt),
             "response_length_chars": len(response),
             "success": success,

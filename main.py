@@ -30,7 +30,7 @@ def check_mongo():
     """Verify MongoDB is reachable."""
     from db.mongo_client import check_connection
     if not check_connection():
-        print("❌ ERROR: Cannot connect to MongoDB!")
+        print("ERROR: Cannot connect to MongoDB!")
         print(f"   URI: {os.getenv('MONGO_URI', 'mongodb://localhost:27017/')}")
         print()
         print("   Please start MongoDB and try again:")
@@ -38,7 +38,7 @@ def check_mongo():
         print("   • Mac/Linux: mongod --dbdir /data/db")
         print("   • Docker: docker run -d -p 27017:27017 mongo")
         sys.exit(1)
-    print("✅ MongoDB connected")
+    print("[OK] MongoDB connected")
 
 
 def list_agents():
@@ -82,14 +82,14 @@ def list_tools():
 
 
 def run_builder_flow():
-    """Interactive builder flow — get user instruction and run the Builder Agent."""
+    """Interactive builder flow — get user instruction, run the Builder, then launch the Worker."""
     from tools_dir.registry import load_registry
-    from db.collections import ensure_indexes
+    from db.collections import ensure_indexes, agents
 
     # Setup
     ensure_indexes()
     registry = load_registry()
-    print(f"📦 Loaded {len(registry)} tools in registry\n")
+    print(f"Loaded {len(registry)} tools in registry\n")
 
     # Get user instruction
     print("Describe what you want your agent to do:")
@@ -98,21 +98,73 @@ def run_builder_flow():
         print("No instruction provided. Exiting.")
         sys.exit(0)
 
-    # Optional model preference
-    print("\nPreferred planner model? [deepseek/grok/gemini/huggingface]")
-    model_pref = input("(press Enter for auto): ").strip().lower()
-
-    if model_pref and model_pref in ("deepseek", "grok", "gemini", "huggingface"):
-        os.environ["PREFERRED_LLM"] = model_pref
-        print(f"  Using: {model_pref}")
-    else:
-        print("  Using: auto (DeepSeek → Grok → Gemini → HuggingFace)")
-
     print()
 
-    # Run the Builder Agent
+    # Run the Builder Agent (creates the worker agent file & saves to DB)
     from builder.builder_agent import start_builder
     start_builder(user_instruction)
+
+    # After builder finishes, find the most recently created 'ready' agent
+    agent_doc = agents().find_one(
+        {"status": "ready"},
+        sort=[("created_at", -1)],
+    )
+
+    if not agent_doc:
+        print("\n[main] Builder finished. (No 'ready' agent found for auto-launch)")
+        return
+
+    agent_file = agent_doc.get("agent_file", "")
+    agent_id = agent_doc.get("agent_id", "?")
+    goal = agent_doc.get("goal", "...")
+
+    if not agent_file or not os.path.isfile(agent_file):
+        return
+
+    print(f"\n{'='*60}")
+    print(f" BUILD COMPLETE: {agent_id}")
+    print(f" Goal: {goal}")
+    print(f"{'='*60}")
+    
+    confirm = input(f"\nShall I launch your agent now? (y/n): ").strip().lower()
+    if confirm != 'y':
+        print(f"\n[main] Agent {agent_id} saved but not launched. You can run it manually:")
+        print(f"       py {agent_file}")
+        return
+
+    print(f"\n[main] Launching worker agent {agent_id}...")
+    
+    # Update status to running
+    agents().update_one(
+        {"agent_id": agent_id},
+        {"$set": {"status": "running"}},
+    )
+
+    # Launch in a CLEAN process to avoid event loop conflicts from the builder
+    import subprocess
+    import platform
+
+    python_exe = sys.executable
+    
+    if platform.system() == "Windows":
+        # Launch in a new terminal window on Windows for visibility
+        subprocess.Popen(
+            ["start", "cmd", "/k", python_exe, agent_file],
+            shell=True
+        )
+    else:
+        # Detached background process on Linux/Mac
+        subprocess.Popen(
+            [python_exe, agent_file],
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+    print(f"\n[main] Agent {agent_id} launched in a new process.")
+    print(f"[main] You can check its progress in the new window or in the 'run_logs' database.")
+
+
 
 
 def main():

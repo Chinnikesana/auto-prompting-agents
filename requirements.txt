@@ -1,6 +1,6 @@
 fast-agent-mcp
 mcp
-openai
+openai>=1.40.0
 google-generativeai
 requests
 pymongo
@@ -12,3 +12,5 @@ pydantic
 python-dotenv
 pyyaml
 fast-agent-mcp
+
+openai>=1.40.0

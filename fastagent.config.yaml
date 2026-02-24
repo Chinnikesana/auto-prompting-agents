@@ -1,7 +1,8 @@
-default_model: openai.meta-llama/Llama-3.3-70B-Instruct
+default_model: openai.llama-3.3-70b-versatile
 
 openai:
-  base_url: "https://router.huggingface.co/v1"
+  base_url: "https://api.groq.com/openai/v1"
+  # api_key is read from OPENAI_API_KEY env var (set in builder_agent.py)
 
 mcp:
   servers:

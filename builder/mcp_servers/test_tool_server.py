@@ -8,7 +8,7 @@ from builder.builder_tools.test_tool import test_tool
 
 import json
 
-mcp = FastMCP("test_tool")
+mcp = FastMCP("run_test_tool")
 
 
 @mcp.tool()
