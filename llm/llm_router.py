@@ -25,7 +25,7 @@ from db.collections import llm_logs
 # ollama = local qwen3:8b (fallback, no API key, fully offline)
 # ---------------------------------------------------------------------------
 PRIORITY = {
-    "code_writing":       ["groq", "ollama", "deepseek", "gemini", "hf_router", "huggingface"],
+    "code_writing":       ["gemini", "groq", "deepseek", "ollama", "hf_router", "huggingface"],
     "prompt_generation":  ["groq", "ollama", "gemini",  "deepseek", "hf_router", "huggingface"],
     "tool_identification":["groq", "ollama", "gemini",  "deepseek", "hf_router", "huggingface"],
 }
@@ -114,7 +114,7 @@ def _get_priority(task_type: str) -> list:
     return base
 
 
-def call_llm(task_type: str, prompt: str, system_prompt: str = "") -> str:
+def call_llm(task_type: str, prompt: str, system_prompt: str = "", provider_override: str = None) -> str:
     """
     Call the best available free LLM for the given task type.
 
@@ -122,11 +122,16 @@ def call_llm(task_type: str, prompt: str, system_prompt: str = "") -> str:
         task_type: One of "code_writing", "prompt_generation", "tool_identification".
         prompt: The user/instruction prompt.
         system_prompt: The system message for the LLM.
+        provider_override: Optional string (e.g. "gemini") to force a specific provider.
 
     Returns:
         Cleaned response string.
     """
-    providers = _get_priority(task_type)
+    if provider_override:
+        providers = [provider_override]
+    else:
+        providers = _get_priority(task_type)
+        
     max_tokens = MAX_TOKENS.get(task_type, 700)
 
     last_error = None
@@ -178,7 +183,7 @@ def _log(task_type: str, provider: str, prompt: str, response: str,
             "groq": "groq/llama-3.3-70b-versatile",
             "ollama": f"ollama/{os.getenv('OLLAMA_MODEL', 'qwen3:8b')}",
             "deepseek": "deepseek-reasoner",
-            "gemini": "gemini-2.0-flash-exp",
+            "gemini": "gemini-pro",
             "hf_router": "meta-llama/Llama-3.3-70B-Instruct",
             "huggingface": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
         }

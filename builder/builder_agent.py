@@ -9,9 +9,11 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-# Point FastAgents at Groq Cloud (OpenAI-compatible API)
+# Environment setup for providers
 os.environ["OPENAI_API_KEY"] = os.getenv("GROQ_API_KEY", "")
 os.environ["OPENAI_BASE_URL"] = "https://api.groq.com/openai/v1"
+os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY", "")
+os.environ["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY", "")
 
 import mcp_agent.core.fastagent as fast_agent
 
@@ -50,10 +52,9 @@ fast = fast_agent.FastAgent(
 
 @fast.agent(
     name="builder",
-    
     instruction=BUILDER_SYSTEM_PROMPT,
     servers=BUILDER_SERVERS,
-    model="openai.meta-llama/llama-4-scout-17b-16e-instruct",  # Groq Cloud — better tool calling
+    model="google.gemini-2.0-flash",  # Reliable and fast for planning
 )
 async def builder_agent():
     pass
@@ -69,7 +70,7 @@ def start_builder(user_instruction: str):
     """Synchronous entry point for the Builder Agent."""
     print("\n[Builder] Starting Builder Agent...")
     print(f"[Builder] User instruction: {user_instruction}")
-    print("[Builder] LLM: Groq Cloud (llama-4-scout-17b-16e-instruct)")
+    print("[Builder] LLM: Google Gemini 2.0 Flash")
     print("[Builder] Executing build pipeline...\n")
 
     asyncio.run(run_builder(user_instruction))

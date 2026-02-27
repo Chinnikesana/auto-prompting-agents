@@ -29,22 +29,25 @@ def create_new_tool(tool_name: str, purpose: str, agent_id: str = "",
     if attempt > 1 and previous_error:
         error_note = f'\nPrevious attempt failed with this error: {previous_error}. Fix this issue.'
 
-    user_msg = f"""Write a Python function for this tool.
+    user_msg = f"""You are building a tool for an AI agent. 
+Use the context and requirements below to write a high-quality, standalone Python function.
 
-Tool name: {tool_name}
-Purpose: {purpose}{error_note}
+TOOL NAME: {tool_name}
+CONTEXT & PURPOSE:
+{purpose}
+{error_note}
 
-Requirements:
-- Function name must be exactly: {tool_name}
-- Single standalone function
-- All imports at the top of the file (not inside the function)
-- Always return a string
-- Wrap main logic in try/except, return error message string on exception
-- If the environment variable TOOL_TEST_MODE is set to "true", return a mock success string immediately without making real network calls or sending real emails
-- Use only these packages if needed: requests, beautifulsoup4, smtplib, feedparser, duckduckgo-search
-- No classes, no argparse, no if __name__ == "__main__" block
+TECHNICAL REQUIREMENTS:
+- Function name MUST be exactly: {tool_name}
+- This must be a single standalone function in a plain Python file.
+- All imports (requests, bs4, etc.) MUST be at the top of the file.
+- The function MUST always return a string (either the result or an error message).
+- Wrap the main logic in a try/except block.
+- MOCK MODE: If the environment variable TOOL_TEST_MODE is "true", return a mock success string immediately. Do NOT make real network calls or send real emails in mock mode.
+- LIBS: Use only these packages if needed: requests, beautifulsoup4, smtplib, feedparser, duckduckgo-search.
+- Constraints: No classes, no argparse, no if __name__ == "__main__" block.
 
-Output only the complete Python file content including imports."""
+Output ONLY the complete Python file content. No conversation, no markdown fences."""
 
     raw_code = call_llm("code_writing", user_msg, system_msg)
 
@@ -72,7 +75,7 @@ Output only the complete Python file content including imports."""
             "tool_name": tool_name,
             "requested_for_agent": agent_id,
             "attempt_number": attempt,
-            "llm_used": "auto",
+            "llm_used": "gemini",
             "purpose_sent": purpose,
             "code_written": code,
             "test_passed": None,

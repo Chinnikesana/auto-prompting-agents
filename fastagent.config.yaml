@@ -1,57 +1,71 @@
 default_model: openai.llama-3.3-70b-versatile
-
 openai:
-  base_url: "https://api.groq.com/openai/v1"
-  # api_key is read from OPENAI_API_KEY env var (set in builder_agent.py)
-
+  base_url: https://api.groq.com/openai/v1
+google:
+  api_key: ${GEMINI_API_KEY}
 mcp:
   servers:
-    # Builder Agent tools
     generate_system_prompt:
       command: python
-      args: ["builder/mcp_servers/generate_system_prompt_server.py"]
+      args:
+      - builder/mcp_servers/generate_system_prompt_server.py
     create_new_tool:
       command: python
-      args: ["builder/mcp_servers/create_new_tool_server.py"]
+      args:
+      - builder/mcp_servers/create_new_tool_server.py
     test_tool:
       command: python
-      args: ["builder/mcp_servers/test_tool_server.py"]
+      args:
+      - builder/mcp_servers/test_tool_server.py
     register_tool:
       command: python
-      args: ["builder/mcp_servers/register_tool_server.py"]
+      args:
+      - builder/mcp_servers/register_tool_server.py
     generate_worker_agent:
       command: python
-      args: ["builder/mcp_servers/generate_worker_agent_server.py"]
+      args:
+      - builder/mcp_servers/generate_worker_agent_server.py
     save_agent_to_db:
       command: python
-      args: ["builder/mcp_servers/save_agent_to_db_server.py"]
+      args:
+      - builder/mcp_servers/save_agent_to_db_server.py
     launch_worker_agent:
       command: python
-      args: ["builder/mcp_servers/launch_worker_agent_server.py"]
-
-    # Pre-built worker tools
+      args:
+      - builder/mcp_servers/launch_worker_agent_server.py
     web_search:
       command: python
-      args: ["tool_mcp_servers/web_search_server.py"]
+      args:
+      - tool_mcp_servers/web_search_server.py
     web_scraper:
       command: python
-      args: ["tool_mcp_servers/web_scraper_server.py"]
+      args:
+      - tool_mcp_servers/web_scraper_server.py
     datetime_tool:
       command: python
-      args: ["tool_mcp_servers/datetime_server.py"]
+      args:
+      - tool_mcp_servers/datetime_server.py
     read_file:
       command: python
-      args: ["tool_mcp_servers/read_file_server.py"]
+      args:
+      - tool_mcp_servers/read_file_server.py
     write_file:
       command: python
-      args: ["tool_mcp_servers/write_file_server.py"]
+      args:
+      - tool_mcp_servers/write_file_server.py
     http_request:
       command: python
-      args: ["tool_mcp_servers/http_request_server.py"]
+      args:
+      - tool_mcp_servers/http_request_server.py
     read_email:
       command: python
-      args: ["tool_mcp_servers/read_email_server.py"]
+      args:
+      - tool_mcp_servers/read_email_server.py
     send_email:
       command: python
-      args: ["tool_mcp_servers/send_email_server.py"]
-    # New tool MCP servers are appended here automatically by register_tool
+      args:
+      - tool_mcp_servers/send_email_server.py
+    text_to_speech:
+      command: python
+      args:
+      - tool_mcp_servers\text_to_speech_server.py
